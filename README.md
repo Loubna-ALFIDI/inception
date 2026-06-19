@@ -1,6 +1,10 @@
+*This project has been created as part of the 42 curriculum by lalfidi*
+
 # Inception
 
-A small web infrastructure running inside Docker containers, orchestrated with Docker Compose.
+## Description
+
+A small web infrastructure running inside Docker containers, orchestrated with Docker Compose. This project demonstrates containerization, orchestration, and networking principles by deploying a production-like HTTPS-enabled WordPress stack with MariaDB and NGINX services.
 
 ---
 
@@ -49,12 +53,12 @@ Only NGINX is exposed to the host, on port 443.
 
 ## Persistent storage
 
-Two named Docker volumes store data on the host under `/home/loulou/data`:
+Two named Docker volumes store data on the host under `/home/lalfidi/data`:
 
 | Volume          | Host path                        | Used by               |
 |-----------------|----------------------------------|-----------------------|
-| `mariadb_data`  | `/home/loulou/data/mariadb`      | MariaDB data directory |
-| `wordpress_data`| `/home/loulou/data/wordpress`    | WordPress web root    |
+| `mariadb_data`  | `/home/lalfidi/data/mariadb`      | MariaDB data directory |
+| `wordpress_data`| `/home/lalfidi/data/wordpress`    | WordPress web root    |
 
 Both NGINX and WordPress mount `wordpress_data` so NGINX can serve static assets without going through php-fpm.
 
@@ -76,7 +80,9 @@ All passwords are stored as plain-text files in `secrets/` and mounted read-only
 
 ---
 
-## Domain name setup
+## Instructions
+
+### Domain name setup
 
 Add one line to `/etc/hosts` on the machine you browse from:
 
@@ -86,9 +92,7 @@ sudo sh -c 'echo "127.0.0.1   lalfidi.1337.ma" >> /etc/hosts'
 
 Replace `127.0.0.1` with your VM's IP if you are accessing from a different machine.
 
----
-
-## How to start the stack
+### How to start the stack
 
 ```bash
 # Build images and start all containers in the background
@@ -98,7 +102,7 @@ make up
 make
 ```
 
-The `up` target automatically creates `/home/loulou/data/mariadb` and `/home/loulou/data/wordpress` before starting containers.
+The `up` target automatically creates `/home/lalfidi/data/mariadb` and `/home/lalfidi/data/wordpress` before starting containers.
 
 ---
 
@@ -192,3 +196,25 @@ inception/
             ├── conf/www.conf
             └── tools/entrypoint.sh
 ```
+---
+
+## Resources
+
+### AI Usage
+
+This project was developed with the assistance of AI tools, which were used for the following purposes:
+
+- **Code scaffolding and structure**: AI assistance was used to design and implement the Dockerfile configurations, docker-compose.yml orchestration, and service entrypoints.
+- **Documentation**: AI tools helped create comprehensive documentation including architecture diagrams, setup instructions, and verification procedures.
+- **Troubleshooting**: AI provided guidance on Docker networking, container lifecycle management, and service dependency resolution.
+- **Configuration optimization**: AI assisted in optimizing NGINX, MariaDB, and PHP-FPM configurations for security and performance.
+
+The core architecture and deployment strategy were guided by 42 curriculum requirements, while AI tools accelerated implementation and documentation tasks.
+
+### Additional references
+
+- [Docker Documentation](https://docs.docker.com/)
+- [Docker Compose](https://docs.docker.com/compose/)
+- [NGINX FastCGI](https://nginx.org/en/docs/http/ngx_http_fastcgi_module.html)
+- [MariaDB Documentation](https://mariadb.com/docs/)
+- [WordPress CLI](https://wp-cli.org/)

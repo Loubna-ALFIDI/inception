@@ -80,6 +80,103 @@ All passwords are stored as plain-text files in `secrets/` and mounted read-only
 
 ---
 
+## Project Description
+
+### Why Docker?
+
+Docker is used in this project to achieve several critical goals:
+
+1. **Isolation**: Each service (NGINX, WordPress, MariaDB) runs in its own container with its own filesystem and processes, preventing conflicts and unexpected interactions.
+2. **Reproducibility**: The same Dockerfile and docker-compose.yml configuration runs identically on any machine with Docker installed, eliminating "works on my machine" problems.
+3. **Scalability**: Services can be easily scaled horizontally (more instances) or modified without affecting the host system.
+4. **Security**: Containers provide process and network isolation by default, with explicit port exposure and read-only filesystem mounts.
+5. **Development efficiency**: Developers can work with production-like environments locally, reducing integration surprises.
+
+### Sources Included in the Project
+
+The project structure includes three main service containers:
+
+- **mariadb/**: Contains the MariaDB database service
+  - `Dockerfile`: Based on `debian:bookworm-slim`, installs MariaDB server
+  - `conf/my.cnf`: Custom MariaDB configuration for performance and security
+  - `tools/entrypoint.sh`: Initialization script to set up database and credentials on first boot
+
+- **nginx/**: Contains the NGINX reverse proxy and web server
+  - `Dockerfile`: Based on `debian:bookworm-slim`, installs NGINX and OpenSSL for TLS
+  - `conf/nginx.conf`: Production-ready NGINX configuration with TLSv1.2/1.3, FastCGI proxying, and static file serving
+  - `tools/setup.sh`: Certificate generation and configuration setup script
+
+- **wordpress/**: Contains WordPress with PHP-FPM
+  - `Dockerfile`: Based on `debian:bookworm-slim`, installs PHP-FPM and WordPress CLI
+  - `conf/www.conf`: PHP-FPM pool configuration
+  - `tools/entrypoint.sh`: WP-CLI automation for WordPress installation and user creation
+
+### Main Design Choices
+
+1. **Multi-stage initialization**: Services start sequentially (MariaDB → WordPress → NGINX) with health checks to ensure readiness before dependents start.
+2. **Minimal base images**: All containers use `debian:bookworm-slim` instead of bloated images, reducing attack surface and startup time.
+3. **Custom entrypoints**: Each service uses shell scripts to automate configuration and credential injection, enabling fully automated deployment.
+4. **Shared volumes**: WordPress code is mounted on both WordPress and NGINX containers, allowing NGINX to serve static files efficiently.
+5. **TLS termination at NGINX**: NGINX is the sole entry point and handles all HTTPS encryption, simplifying WordPress configuration and reducing computational overhead on the application server.
+6. **Secrets management**: Passwords are mounted as read-only files from `/run/secrets/`, following Docker best practices.
+
+### Technical Comparisons
+
+#### Virtual Machines vs Docker
+
+| Aspect | Virtual Machines | Docker |
+|--------|------------------|--------|
+| **Overhead** | High (full OS per VM, 100s MB-GB) | Minimal (shared kernel, 10s-100s MB) |
+| **Startup time** | Minutes | Seconds |
+| **Portability** | Tied to hypervisor | Runs on any OS with Docker |
+| **Resource efficiency** | Lower (multiple full OSes) | Higher (one shared OS kernel) |
+| **Isolation** | Process & OS-level | Process-level (still strong) |
+| **Use case** | Legacy apps, multi-OS | Microservices, cloud-native |
+
+**Why Docker for this project**: Docker provides sufficient isolation for microservices while keeping resource overhead minimal. NGINX, WordPress, and MariaDB don't require full OS kernels—they just need their runtime dependencies.
+
+#### Secrets vs Environment Variables
+
+| Aspect | Environment Variables | Docker Secrets |
+|--------|----------------------|-----------------|
+| **Visibility** | Exposed in `docker inspect`, process listing | Hidden in container filesystem |
+| **Logging** | Often logged accidentally | Never logged by Docker |
+| **Revocation** | Requires container restart | Immediate (in swarm mode) |
+| **Scalability** | Simple for small projects | Better for large deployments |
+| **Security** | Lower (readable in many places) | Higher (mounted as files only) |
+| **Current approach** | Not used here | **Used** (files in `/run/secrets/`) |
+
+**Why files in `/run/secrets/`**: This approach is more secure than environment variables. Docker runs these containers with secret files mounted read-only at runtime, preventing accidental exposure in logs or `docker inspect` output. In production, Docker secrets (in swarm mode) would be preferred.
+
+#### Docker Network vs Host Network
+
+| Aspect | Bridge Network | Host Network |
+|--------|---|---|
+| **Isolation** | Full network isolation | No isolation (shares host network) |
+| **Port mapping** | Required (port forwarding) | Direct access to host ports |
+| **Inter-container communication** | Via container names (DNS) | Via localhost:port or IP |
+| **Security** | Higher (internal services not exposed) | Lower (all ports visible to host) |
+| **Performance** | Slight overhead (NAT/routing) | Negligible (direct access) |
+| **Use case** | Default, recommended | Legacy apps, special requirements |
+
+**Why bridge network here**: This project uses a custom bridge network (`inception`) for maximum isolation. Only NGINX exposes port 443 to the host; MariaDB and WordPress communicate internally via container DNS. This prevents accidental external access to database or app servers.
+
+#### Docker Volumes vs Bind Mounts
+
+| Aspect | Named Volumes | Bind Mounts |
+|--------|---|---|
+| **Location** | Docker-managed (`/var/lib/docker/volumes/`) | Host filesystem path |
+| **Persistence** | Survives container deletion | Survives container deletion |
+| **Portability** | Database-agnostic, driver-agnostic | Tied to host filesystem |
+| **Performance** | Optimized for Docker | Slower on non-Linux (VM overhead) |
+| **Permissions** | Docker-managed | Host filesystem permissions apply |
+| **Backup/restore** | Via Docker API | Via standard filesystem tools |
+| **Current approach** | **Used** (`mariadb_data`, `wordpress_data`) | Not used |
+
+**Why named volumes here**: This project uses named volumes for data persistence. Volumes are managed by Docker, making backup and migration easier. They survive container recreation (via `make fclean` and `make up`), and on Linux they provide optimal I/O performance. Bind mounts could expose host filesystem and make deployment less portable.
+
+---
+
 ## Instructions
 
 ### Domain name setup

@@ -9,7 +9,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 
 # Drop our server block into conf.d/ – the container's default nginx.conf
 # already contains:  include /etc/nginx/conf.d/*.conf;
-COPY conf/nginx.conf /etc/nginx/conf.d/default.conf
+COPY conf/nginx.conf /etc/nginx/conf.d/nginx.conf
 RUN rm -f /etc/nginx/sites-enabled/default
 COPY tools/setup.sh /usr/local/bin/setup.sh
 RUN chmod +x /usr/local/bin/setup.sh
